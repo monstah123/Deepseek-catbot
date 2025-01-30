@@ -1,6 +1,13 @@
 # Deepseek-catbot
 testing Deepseek api
 
+### Prerequisites:
+1. **OpenAI API Key**: You need to have an OpenAI API key. You can get one by signing up at [OpenAI](https://beta.openai.com/signup/).
+2. **Install OpenAI Python Package**: You need to install the OpenAI Python package. You can do this using pip:
+   ```bash
+   pip install openai
+   ```
+
 How It Works:
 1. **API Key**: Replace `'your-openai-api-key'` with your actual OpenAI API key.
 2. **Engine**: The script uses the `text-davinci-003` engine, but you can switch to other engines like `gpt-3.5-turbo` if you prefer.

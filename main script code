@@ -1,0 +1,227 @@
+##PYTHON SCRIPT
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepSeek Chatbot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      background-color: #f4f4f9;
+    }
+    .chatbot-container {
+      width: 100%;
+      max-width: 600px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    .chatbot-header {
+      background: #4CAF50;
+      color: white;
+      padding: 16px;
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chatbot-messages {
+      height: 400px;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 20px;
+      line-height: 1.4;
+      white-space: pre-wrap; /* Ensure proper line breaks */
+    }
+    .user-message {
+      background: #4CAF50;
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .bot-message {
+      background: #f0f0f0;
+      color: #333;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .chatbot-input {
+      display: flex;
+      padding: 16px;
+      border-top: 1px solid #ddd;
+      background: #f9f9f9;
+      gap: 8px;
+    }
+    .chatbot-input input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    .chatbot-input button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+    .send-button {
+      background: #4CAF50;
+      color: white;
+    }
+    .clear-button {
+      background: #f44336;
+      color: white;
+    }
+    .chatbot-input button:hover {
+      opacity: 0.9;
+    }
+    .loading-indicator {
+      padding: 12px;
+      text-align: center;
+      color: #666;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="chatbot-container">
+    <div class="chatbot-header">
+      <span>DeepSeek Chatbot</span>
+      <button class="clear-button" onclick="clearChat()">Clear Chat</button>
+    </div>
+    <div class="chatbot-messages" id="chatbotMessages"></div>
+    <div class="chatbot-input">
+      <input type="text" id="userInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+      <button class="send-button" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const apiKey = "sk-2edd3918a2a24b53b819d449c7a81dca";
+    const apiUrl = "https://api.deepseek.com/v1/chat/completions";
+    const messagesContainer = document.getElementById("chatbotMessages");
+    let isLoading = false;
+    let messageHistory = [];
+
+    // Load chat history when page loads
+    window.onload = function() {
+      loadHistory();
+    };
+
+    function loadHistory() {
+      const savedHistory = localStorage.getItem("chatHistory");
+      if (savedHistory) {
+        messageHistory = JSON.parse(savedHistory);
+        messageHistory.forEach(msg => addMessage(msg.content, msg.role === "user"));
+      }
+    }
+
+    function saveHistory() {
+      localStorage.setItem("chatHistory", JSON.stringify(messageHistory));
+    }
+
+    function clearChat() {
+      messagesContainer.innerHTML = "";
+      messageHistory = [];
+      localStorage.removeItem("chatHistory");
+    }
+
+    function addMessage(content, isUser = true) {
+      const messageDiv = document.createElement("div");
+      messageDiv.className = `message ${isUser ? "user-message" : "bot-message"}`;
+      messageDiv.textContent = content;
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+      // Add to message history
+      messageHistory.push({
+        role: isUser ? "user" : "assistant",
+        content: content
+      });
+      saveHistory();
+    }
+
+    function showLoading() {
+      if (isLoading) return;
+      const loadingDiv = document.createElement("div");
+      loadingDiv.className = "loading-indicator";
+      loadingDiv.textContent = "Thinking...";
+      messagesContainer.appendChild(loadingDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      isLoading = true;
+    }
+
+    function hideLoading() {
+      const loadingElements = document.getElementsByClassName("loading-indicator");
+      while (loadingElements.length > 0) {
+        loadingElements[0].remove();
+      }
+      isLoading = false;
+    }
+
+    async function sendMessage() {
+      const userInput = document.getElementById("userInput");
+      const message = userInput.value.trim();
+      if (!message || isLoading) return;
+
+      addMessage(message, true);
+      userInput.value = "";
+      showLoading();
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "deepseek-chat",
+            messages: messageHistory,
+            temperature: 0.7
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || "API request failed");
+        }
+
+        const data = await response.json();
+        const botResponse = data.choices[0].message.content;
+        addMessage(botResponse, false);
+      } catch (error) {
+        console.error("Error:", error);
+        addMessage(`Error: ${error.message}`, false);
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    }
+  </script>
+</body>
+</html>

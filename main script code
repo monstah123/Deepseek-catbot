@@ -115,7 +115,7 @@
   </div>
 
   <script>
-    const apiKey = "";
+    const apiKey = ""; #Add API KEY
     const apiUrl = "https://api.deepseek.com/v1/chat/completions";
     const messagesContainer = document.getElementById("chatbotMessages");
     let isLoading = false;
